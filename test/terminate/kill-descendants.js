@@ -61,6 +61,24 @@ test('killDescendants also terminates descendant processes when the subprocess t
 	t.false(isRunning(descendantPid));
 });
 
+test('killDescendants preserves signal 0 as a non-destructive liveness check', async t => {
+	const {subprocess, descendantPid} = await spawnDescendant(true);
+
+	t.true(subprocess.kill(0));
+	await setTimeout(500);
+	t.true(isRunning(subprocess.pid));
+	t.true(isRunning(descendantPid));
+
+	subprocess.kill();
+	await t.throwsAsync(subprocess);
+
+	await Promise.race([
+		setTimeout(1e4, undefined, {ref: false}),
+		pollForSubprocessExit(descendantPid),
+	]);
+	t.false(isRunning(descendantPid));
+});
+
 // On Windows, terminating the direct subprocess already terminates its descendants, so this
 // only asserts the default Unix behavior of leaving descendants running.
 if (!isWindows) {
@@ -130,6 +148,44 @@ test.serial('taskkill is resolved from the Windows directory when available', t 
 
 	delete process.env.windir;
 	t.is(getTaskkillFile(), undefined);
+});
+
+test.serial('signal 0 bypasses taskkill when killing descendants on Windows', async t => {
+	const platformDescriptor = Object.getOwnPropertyDescriptor(process, 'platform');
+	const originalExecFile = childProcess.execFile;
+	const {SystemRoot, windir} = process.env;
+	t.teardown(() => {
+		Object.defineProperty(process, 'platform', platformDescriptor);
+		childProcess.execFile = originalExecFile;
+		syncBuiltinESMExports();
+		restoreEnvironment('SystemRoot', SystemRoot);
+		restoreEnvironment('windir', windir);
+	});
+
+	Object.defineProperty(process, 'platform', {value: 'win32'});
+	process.env.SystemRoot = 'C:\\Windows';
+	delete process.env.windir;
+
+	let taskkillCalled = false;
+	childProcess.execFile = () => {
+		taskkillCalled = true;
+	};
+	syncBuiltinESMExports();
+
+	const {getKillFunction} = await import(`../../lib/terminate/kill-descendants.js?signal-zero=${Date.now()}`);
+	let killedWith;
+	const subprocess = {
+		pid: 123,
+		kill(signal) {
+			killedWith = signal;
+			return true;
+		},
+	};
+
+	const kill = getKillFunction(subprocess, {killDescendants: true});
+	t.true(kill(0));
+	t.is(killedWith, 0);
+	t.false(taskkillCalled);
 });
 
 test.serial('taskkill fallback uses direct subprocess kill when Windows directory is unavailable', async t => {
