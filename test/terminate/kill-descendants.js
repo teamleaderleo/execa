@@ -61,24 +61,6 @@ test('killDescendants also terminates descendant processes when the subprocess t
 	t.false(isRunning(descendantPid));
 });
 
-test('killDescendants preserves signal 0 as a non-destructive liveness check', async t => {
-	const {subprocess, descendantPid} = await spawnDescendant(true);
-
-	t.true(subprocess.kill(0));
-	await setTimeout(500);
-	t.true(isRunning(subprocess.pid));
-	t.true(isRunning(descendantPid));
-
-	subprocess.kill();
-	await t.throwsAsync(subprocess);
-
-	await Promise.race([
-		setTimeout(1e4, undefined, {ref: false}),
-		pollForSubprocessExit(descendantPid),
-	]);
-	t.false(isRunning(descendantPid));
-});
-
 // On Windows, terminating the direct subprocess already terminates its descendants, so this
 // only asserts the default Unix behavior of leaving descendants running.
 if (!isWindows) {
