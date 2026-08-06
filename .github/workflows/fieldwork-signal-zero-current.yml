@@ -22,7 +22,7 @@ jobs:
     timeout-minutes: 30
     steps:
       - name: Check out exact candidate
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: 30723e8337b25e868f35a6eda9dbeb4f9445abce
           fetch-depth: 0
@@ -43,15 +43,15 @@ jobs:
           rm actual expected
 
       - name: Use Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: ${{ matrix.node }}
-          cache: npm
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install
 
       - name: Lint repository
+        if: ${{ matrix.os == 'ubuntu-latest' && matrix.node == 26 }}
         run: npm run lint
 
       - name: Run signal-zero and descendant controls
