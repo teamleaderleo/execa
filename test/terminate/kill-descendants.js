@@ -148,13 +148,14 @@ test.serial('signal 0 bypasses taskkill when killing descendants on Windows', as
 	process.env.SystemRoot = 'C:\\Windows';
 	delete process.env.windir;
 
-	let taskkillCalled = false;
+	let isTaskkillCalled = false;
 	childProcess.execFile = () => {
-		taskkillCalled = true;
+		isTaskkillCalled = true;
 	};
 	syncBuiltinESMExports();
 
 	const {getKillFunction} = await import(`../../lib/terminate/kill-descendants.js?signal-zero=${Date.now()}`);
+
 	let killedWith;
 	const subprocess = {
 		pid: 123,
@@ -167,7 +168,7 @@ test.serial('signal 0 bypasses taskkill when killing descendants on Windows', as
 	const kill = getKillFunction(subprocess, {killDescendants: true});
 	t.true(kill(0));
 	t.is(killedWith, 0);
-	t.false(taskkillCalled);
+	t.false(isTaskkillCalled);
 });
 
 test.serial('taskkill fallback uses direct subprocess kill when Windows directory is unavailable', async t => {
