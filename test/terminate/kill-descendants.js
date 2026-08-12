@@ -132,6 +132,46 @@ test.serial('taskkill is resolved from the Windows directory when available', t 
 	t.is(getTaskkillFile(), undefined);
 });
 
+test.serial('signal 0 bypasses taskkill when killing descendants on Windows', async t => {
+	const platformDescriptor = Object.getOwnPropertyDescriptor(process, 'platform');
+	const originalExecFile = childProcess.execFile;
+	const {SystemRoot, windir} = process.env;
+	t.teardown(() => {
+		Object.defineProperty(process, 'platform', platformDescriptor);
+		childProcess.execFile = originalExecFile;
+		syncBuiltinESMExports();
+		restoreEnvironment('SystemRoot', SystemRoot);
+		restoreEnvironment('windir', windir);
+	});
+
+	Object.defineProperty(process, 'platform', {value: 'win32'});
+	process.env.SystemRoot = 'C:\\Windows';
+	delete process.env.windir;
+
+	let isTaskkillCalled = false;
+	childProcess.execFile = () => {
+		isTaskkillCalled = true;
+	};
+
+	syncBuiltinESMExports();
+
+	const {getKillFunction} = await import(`../../lib/terminate/kill-descendants.js?signal-zero=${Date.now()}`);
+
+	let killedWith;
+	const subprocess = {
+		pid: 123,
+		kill(signal) {
+			killedWith = signal;
+			return true;
+		},
+	};
+
+	const kill = getKillFunction(subprocess, {killDescendants: true});
+	t.true(kill(0));
+	t.is(killedWith, 0);
+	t.false(isTaskkillCalled);
+});
+
 test.serial('taskkill fallback uses direct subprocess kill when Windows directory is unavailable', async t => {
 	const platformDescriptor = Object.getOwnPropertyDescriptor(process, 'platform');
 	const {SystemRoot, windir} = process.env;
