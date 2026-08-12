@@ -24,7 +24,7 @@ jobs:
       - name: Check out exact candidate
         uses: actions/checkout@v7
         with:
-          ref: 38efe3b8197601e5c658c17583a54f5fb3469163
+          ref: e8c500fa41a64562e78b717b76e793c36dd3c11d
           fetch-depth: 0
           persist-credentials: false
 
@@ -32,7 +32,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test "$(git rev-parse HEAD)" = "38efe3b8197601e5c658c17583a54f5fb3469163"
+          test "$(git rev-parse HEAD)" = "e8c500fa41a64562e78b717b76e793c36dd3c11d"
           git diff --check 8017b279e19347efaf2587711c2d57dbd4330740..HEAD
           git diff --name-only 8017b279e19347efaf2587711c2d57dbd4330740..HEAD | sort > actual
           printf '%s\n' \
@@ -61,5 +61,5 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test "$(git rev-parse HEAD)" = "38efe3b8197601e5c658c17583a54f5fb3469163"
+          test "$(git rev-parse HEAD)" = "e8c500fa41a64562e78b717b76e793c36dd3c11d"
           test -z "$(git status --porcelain)"
