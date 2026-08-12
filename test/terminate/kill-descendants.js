@@ -152,6 +152,7 @@ test.serial('signal 0 bypasses taskkill when killing descendants on Windows', as
 	childProcess.execFile = () => {
 		isTaskkillCalled = true;
 	};
+
 	syncBuiltinESMExports();
 
 	const {getKillFunction} = await import(`../../lib/terminate/kill-descendants.js?signal-zero=${Date.now()}`);
